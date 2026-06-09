@@ -498,31 +498,6 @@ html:not([data-theme="dark"]) .logo .logo-dark{
 }
 
 
-/* v19: subtle rights */
-.dev-credit{
-  position:fixed;
-  right:14px;
-  bottom:76px;
-  z-index:39;
-  font-size:10.5px;
-  font-weight:700;
-  color:rgba(74,90,114,.42);
-  letter-spacing:.01em;
-  pointer-events:none;
-  user-select:none;
-}
-[data-theme="dark"] .dev-credit{
-  color:rgba(122,143,168,.36);
-}
-@media(max-width:520px){
-  .dev-credit{
-    right:10px;
-    bottom:72px;
-    font-size:9.5px;
-  }
-}
-
-
 /* v20: edit names + mark all present */
 .edit-name-btn{
   width:30px;height:30px;background:var(--blue-bg);border:1.5px solid var(--blue);
@@ -536,6 +511,62 @@ html:not([data-theme="dark"]) .logo .logo-dark{
   border-color:var(--green);
 }
 .tbtn.present-all:active{transform:scale(.96)}
+
+
+
+/* v24: centered footer-style rights, not fixed */
+.dev-credit-inline{
+  margin:34px auto 14px;
+  padding-bottom:18px;
+  text-align:center;
+  color:rgba(74,90,114,.46);
+  font-size:14px;
+  font-weight:800;
+  letter-spacing:.01em;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  user-select:none;
+}
+.dev-credit-inline .spark{
+  color:var(--gold);
+  opacity:.75;
+  font-size:12px;
+}
+[data-theme="dark"] .dev-credit-inline{
+  color:rgba(122,143,168,.42);
+}
+.tbtn.clear-attendance{
+  background:var(--red-bg);
+  color:var(--red);
+  border-color:var(--red);
+}
+@media(max-width:520px){
+  main{padding-bottom:130px !important;}
+  .dev-credit-inline{
+    margin:28px auto 4px;
+    font-size:12.5px;
+    opacity:.72;
+    gap:6px;
+    flex-wrap:wrap;
+    max-width:92%;
+  }
+  .toolbar .tbtn.present-all,
+  .toolbar .tbtn.clear-attendance{
+    flex:1 1 auto;
+    justify-content:center;
+  }
+}
+
+
+/* v28: keep Thmanyah everywhere, Apple-style only for credit */
+.dev-credit-inline{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Arabic","Helvetica Neue",Arial,sans-serif !important;
+  font-weight:400 !important;
+  letter-spacing:-.01em !important;
+  opacity:.55;
+}
 
 </style>
 <style>
@@ -836,8 +867,9 @@ ctx.textAlign = "center";
     ctx.textAlign = "right";
 
     // stats
+    const attendancePercent = members.length ? Math.round(((counts.present||0) / members.length) * 100) : 0;
     const stats = [
-      ["الكل", members.length, "#4a7fd4"],
+      ["نسبة الحضور", attendancePercent + "%", "#4a7fd4"],
       ["حاضر", counts.present||0, "#22c55e"],
       ["متأخر بعذر", counts["late-ex"]||0, "#4a7fd4"],
       ["متأخر بغير عذر", counts["late-no"]||0, "#fb923c"],
@@ -981,7 +1013,6 @@ async function shareReport(){
 </header>
 
 <div class="toast" id="toast"></div>
-<div class="dev-credit">Designed & Developed by Abdulrahman Alomar</div>
 
 
 <!-- Bottom Sheet -->
@@ -1011,7 +1042,7 @@ async function shareReport(){
 <main>
   <!-- Stats -->
   <div class="stats">
-    <div class="stat s-total"><div class="n" id="stTotal">0</div><div class="l">الكل</div></div>
+    <div class="stat s-total"><div class="n" id="stTotal">0%</div><div class="l">نسبة<br>الحضور</div></div>
     <div class="stat s-present"><div class="n" id="stPresent">0</div><div class="l">حاضر</div></div>
     <div class="stat s-late-ex"><div class="n" id="stLateEx">0</div><div class="l">متأخر<br>بعذر</div></div>
     <div class="stat s-late-no"><div class="n" id="stLateNo">0</div><div class="l">متأخر<br>بغير عذر</div></div>
@@ -1026,6 +1057,7 @@ async function shareReport(){
     </div>
     <button class="tbtn add" onclick="toggleAdd()">➕</button>
     <button class="tbtn present-all" onclick="markAllPresent()">✓ حضور الكل</button>
+    <button class="tbtn clear-attendance" onclick="clearAttendanceOnly()">↺ إلغاء التحضير</button>
     <button class="tbtn" id="editBtn" onclick="toggleEdit()">✏️</button>
   </div>
 
@@ -1046,6 +1078,11 @@ async function shareReport(){
     </div>
     <div id="rows"></div>
   </div>
+
+  <div class="dev-credit-inline">
+    <span>Powered by Abdulrahman Alomar</span>
+  </div>
+
 </main>
 
 <!-- Upload bar -->
@@ -1144,7 +1181,7 @@ function render(){
 function updateStats(){
   const c={present:0,"late-ex":0,"late-no":0,"absent-ex":0,"absent-no":0};
   members.forEach(m=>{if(attendance[m])c[attendance[m]]=(c[attendance[m]]||0)+1;});
-  document.getElementById("stTotal").textContent = members.length;
+  document.getElementById("stTotal").textContent = (members.length ? Math.round(((c.present||0) / members.length) * 100) : 0) + "%";
   document.getElementById("stPresent").textContent = c.present||0;
   document.getElementById("stLateEx").textContent = c["late-ex"]||0;
   document.getElementById("stLateNo").textContent = c["late-no"]||0;
@@ -1246,6 +1283,18 @@ function markAllPresent(){
   save("nizam_attendance", attendance);
   render();
   showToast("تم تحضير الجميع","success");
+}
+
+function clearAttendanceOnly(){
+  if(!Object.keys(attendance).length){
+    showToast("لا يوجد رصد لإلغائه","error");
+    return;
+  }
+  if(!confirm("إلغاء جميع حالات الرصد الحالية بدون رفع؟")) return;
+  attendance = {};
+  save("nizam_attendance", attendance);
+  render();
+  showToast("تم إلغاء الرصد","success");
 }
 
 function toggleEdit(){
